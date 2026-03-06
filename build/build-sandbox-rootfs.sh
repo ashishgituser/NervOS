@@ -154,7 +154,7 @@ echo "  Image:  $ROOTFS_IMG"
 ls -lh "$ROOTFS_IMG"
 echo ""
 echo "  Contents:"
-sudo du -sh "$MOUNT_DIR"/* 2>/dev/null | head -15
+sudo du -sh "$MOUNT_DIR"/* 2>/dev/null | head -15 || true
 echo ""
 echo "  This rootfs is for MCP sandbox mode only."
 echo "  Boot time: ~2-3 seconds (no model to load)"
