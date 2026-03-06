@@ -7,7 +7,7 @@
 #
 # This is ~80% smaller than the full rootfs:
 #   Full:    1200MB (includes 469MB model + 13MB llama-server)
-#   Sandbox:  256MB (just Alpine + Python + tools)
+#   Sandbox:  512MB (just Alpine + Python + tools)
 #
 # Output: build/rootfs.ext4
 # ============================================================
@@ -20,7 +20,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 WIN_PROJECT_DIR="$PROJECT_DIR"
 
 ROOTFS_IMG="$WIN_PROJECT_DIR/build/rootfs.ext4"
-ROOTFS_SIZE_MB=256
+ROOTFS_SIZE_MB=512
 MOUNT_DIR="/tmp/nervos-rootfs-mount"
 ALPINE_MIRROR="http://dl-cdn.alpinelinux.org/alpine/v3.21"
 ALPINE_MINIROOTFS="$ALPINE_MIRROR/releases/x86_64/alpine-minirootfs-3.21.3-x86_64.tar.gz"
@@ -104,10 +104,7 @@ sudo chroot "$MOUNT_DIR" /bin/sh -c "
         tar \
         gzip \
         openssh-client \
-        bash \
-        build-base \
-        linux-headers \
-        python3-dev
+        bash
 "
 echo "  ✓ Packages installed"
 
