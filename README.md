@@ -129,7 +129,7 @@ The pre-built bundle (~100MB) includes Firecracker, a Linux kernel, and the root
 
 ```bash
 # Clone
-git clone https://github.com/AshishKumar/NervOS.git
+git clone https://github.com/ashishgituser/NervOS.git
 cd NervOS
 
 # Build the micro-OS locally (needs Linux/WSL2 + sudo)
@@ -149,4 +149,6 @@ Files go into `build/` locally. The bootstrap module auto-detects local builds.
 
 ## License
 
-MIT
+AGPL-3.0 — Free for personal and open-source use. If you modify NervOS and offer it as a service, you must open-source your changes under the same license.
+
+For commercial licensing, contact the author.
