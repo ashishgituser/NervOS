@@ -46,13 +46,16 @@ jobs:
 
       - name: Download Firecracker
         run: |
-          cd /tmp
-          curl -sL -o fc.tgz "https://github.com/firecracker-microvm/firecracker/releases/download/${{ env.FC_VERSION }}/firecracker-${{ env.FC_VERSION }}-x86_64.tgz"
-          tar xzf fc.tgz
-          FC_BIN=$(find /tmp -name "firecracker-*" -type f -not -name "*.tgz" | head -1)
+          mkdir -p /tmp/fc-extract
+          curl -sL -o /tmp/fc.tgz "https://github.com/firecracker-microvm/firecracker/releases/download/${{ env.FC_VERSION }}/firecracker-${{ env.FC_VERSION }}-x86_64.tgz"
+          tar xzf /tmp/fc.tgz -C /tmp/fc-extract
+          # Tarball contains: release-VERSION-ARCH/firecracker-VERSION-ARCH
+          FC_BIN=$(find /tmp/fc-extract -name "firecracker-*" -type f | head -1)
+          echo "Found firecracker binary: $FC_BIN"
           cp "$FC_BIN" /tmp/firecracker
           chmod +x /tmp/firecracker
-          /tmp/firecracker --version
+          file /tmp/firecracker
+          ls -lh /tmp/firecracker
 
       - name: Download kernel
         run: |
