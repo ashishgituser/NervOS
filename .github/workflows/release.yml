@@ -20,7 +20,6 @@ permissions:
 
 env:
   FC_VERSION: "v1.11.0"
-  KERNEL_URL: "https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/x86_64/kernels/vmlinux-6.1.102"
   ALPINE_VERSION: "3.21"
 
 jobs:
@@ -59,8 +58,34 @@ jobs:
 
       - name: Download kernel
         run: |
-          curl -sL -o /tmp/vmlinux "${{ env.KERNEL_URL }}"
+          # Firecracker CI kernels — dynamically find the latest available
+          ARCH="x86_64"
+          FC_MINOR="${FC_VERSION%.*}"  # v1.11.0 -> v1.11
+          
+          # Try the CI bucket first
+          KERNEL_KEY=$(curl -s "http://spec.ccfc.min.s3.amazonaws.com/?prefix=firecracker-ci/${FC_MINOR}/${ARCH}/vmlinux-&list-type=2" \
+            | grep -oP '(?<=<Key>)(firecracker-ci/[^<]+vmlinux-[0-9][^<]*)' \
+            | sort -V | tail -1)
+          
+          if [ -n "$KERNEL_KEY" ]; then
+            echo "Found kernel: $KERNEL_KEY"
+            curl -sL -o /tmp/vmlinux "https://s3.amazonaws.com/spec.ccfc.min/${KERNEL_KEY}"
+          else
+            # Fallback: build a minimal kernel or use a known good URL
+            echo "CI bucket empty, trying quickstart path..."
+            curl -sL -o /tmp/vmlinux "https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/${ARCH}/kernels/vmlinux-5.10.225"
+          fi
+          
+          # Validate it's actually an ELF binary, not an XML error
+          if ! file /tmp/vmlinux | grep -q "ELF"; then
+            echo "ERROR: Downloaded kernel is not a valid ELF binary!"
+            file /tmp/vmlinux
+            head -c 200 /tmp/vmlinux
+            exit 1
+          fi
+          
           ls -lh /tmp/vmlinux
+          file /tmp/vmlinux
 
       - name: Build BunkerVM rootfs
         run: |

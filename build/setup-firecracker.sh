@@ -38,11 +38,26 @@ KERNEL_PATH="$BUILD_DIR/vmlinux"
 if [ -f "$KERNEL_PATH" ]; then
     echo "Kernel already exists: $(ls -lh $KERNEL_PATH)"
 else
-    # Firecracker provides pre-built kernels
-    KERNEL_URL="https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/x86_64/kernels/vmlinux-6.1.102"
+    # Firecracker CI kernels — dynamically find the latest available
+    ARCH="x86_64"
+    FC_MINOR=$(echo "$FC_VERSION" | sed 's/\.[0-9]*$//')
+    
+    KERNEL_KEY=$(curl -s "http://spec.ccfc.min.s3.amazonaws.com/?prefix=firecracker-ci/${FC_MINOR}/${ARCH}/vmlinux-&list-type=2" \
+      | grep -oP '(?<=<Key>)(firecracker-ci/[^<]+vmlinux-[0-9][^<]*)' \
+      | sort -V | tail -1)
+    
+    if [ -n "$KERNEL_KEY" ]; then
+      KERNEL_URL="https://s3.amazonaws.com/spec.ccfc.min/${KERNEL_KEY}"
+    else
+      # Fallback to quickstart path
+      KERNEL_URL="https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/x86_64/kernels/vmlinux-5.10.225"
+    fi
+    
     echo "Downloading kernel from $KERNEL_URL ..."
     curl -sL -o "$KERNEL_PATH" "$KERNEL_URL"
-    if [ -s "$KERNEL_PATH" ]; then
+    
+    # Validate it's actually an ELF binary
+    if file "$KERNEL_PATH" | grep -q "ELF"; then
         echo "Kernel downloaded: $(ls -lh $KERNEL_PATH)"
     else
         echo "S3 download failed, trying alternative..."
