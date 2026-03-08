@@ -2,15 +2,59 @@
 
 Run AI agent code inside a Firecracker microVM instead of your host machine.
 
-NervOS provides a lightweight sandbox for AI agents executing arbitrary code.
-
 > Give your AI agent a computer. Isolated. Instant. Self-hosted.
 
-BunkerVM is a tiny operating system that boots in **2 seconds** and gives AI agents a safe, isolated Linux machine to work in. Install it with one command. No Docker. No cloud. No config files.
+BunkerVM is a tiny operating system that boots in **under 6 seconds** and gives AI agents a safe, isolated Linux machine to work in. Install it with one command. No Docker. No cloud. No config files.
+
+---
+
+## See it in action
+
+```
+$ pip install bunkervm[langgraph]
+Successfully installed bunkervm-0.2.5
+
+$ sudo python3 -m bunkervm &
+⚡ Downloading BunkerVM bundle (first run)... done (98MB)
+⚡ Booting Firecracker MicroVM...
+✓ VM ready in 5.2s — KVM hardware isolation active
+✓ MCP server ready (transport: stdio)
+```
+
+```python
+# 5 lines — that's the entire integration
+from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
+from bunkervm.langchain import BunkerVMToolkit
+
+agent = create_react_agent(ChatOpenAI(model="gpt-4o"), BunkerVMToolkit().get_tools())
+result = agent.invoke({"messages": [("human", "Write and run a Python script that finds primes under 50")]})
+```
+
+```
+→ write_file: /tmp/primes.py
+← wrote 312 bytes
+
+→ run_command: python3 /tmp/primes.py
+← 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47
+
+🤖 The prime numbers under 50 are: 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47.
+```
+
+```
+           HOST                    VM (Firecracker)
+Hostname:  ashish-PC               localhost
+Kernel:    5.15.167.4-microsoft    5.10.225
+OS:        Ubuntu (WSL2)           Alpine Linux v3.21
+```
+
+**Everything the agent did ran inside the VM. Your host was never touched.**
+
+---
 
 ## Install
 
-```
+```bash
 pip install bunkervm
 ```
 
@@ -42,7 +86,28 @@ Add this to your Claude Desktop config:
 }
 ```
 
-That's it. On first run, BunkerVM downloads a ~100MB pre-built micro-OS. After that, every launch boots a fresh VM in ~2 seconds.
+That's it. On first run, BunkerVM downloads a ~100MB pre-built micro-OS. After that, every launch boots a fresh VM in ~5 seconds.
+
+## Use with LangGraph / LangChain
+
+```bash
+pip install bunkervm[langgraph]
+```
+
+```python
+from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
+from bunkervm.langchain import BunkerVMToolkit
+
+toolkit = BunkerVMToolkit()  # connects to running VM
+agent = create_react_agent(ChatOpenAI(model="gpt-4o"), toolkit.get_tools())
+
+result = agent.invoke({
+    "messages": [("human", "Write a script that calculates fibonacci numbers, run it")]
+})
+```
+
+The toolkit gives your agent four tools: `run_command`, `write_file`, `read_file`, `list_directory`. All calls are logged with `→` / `←` arrows so you can see exactly what the agent does.
 
 ## What can it do?
 
@@ -65,7 +130,7 @@ Once connected, your AI agent gets these tools:
 |---|---|---|
 | Isolation | **Hardware (KVM)** — separate kernel | Shared kernel |
 | Escape risk | Near zero | Container escapes exist |
-| Boot time | ~2s | ~0.5s |
+| Boot time | ~5s | ~0.5s |
 | Self-hosted | Yes | Yes |
 | Internet access | Optional | Yes |
 | Setup | `pip install` | Dockerfile + build + run |
@@ -92,11 +157,10 @@ BunkerVM speaks the [Model Context Protocol](https://modelcontextprotocol.io). I
 - Any MCP-compatible agent framework
 
 ```bash
-# For LangGraph integration:
 pip install bunkervm[langgraph]
 ```
 
-See [tests/test_langgraph.py](tests/test_langgraph.py) for a working example.
+See [examples/test_agent.py](examples/test_agent.py) for a working 5-line agent example.
 
 ## How it works (you don't need to know this)
 
