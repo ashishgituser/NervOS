@@ -1,0 +1,11 @@
+# Force LF line endings for shell scripts (critical for CI)
+*.sh text eol=lf
+rootfs/init text eol=lf
+
+# Keep Python files auto-detected
+*.py text=auto
+*.toml text=auto
+*.yml text=auto
+*.md text=auto
+*.json text=auto
+*.html text=auto
