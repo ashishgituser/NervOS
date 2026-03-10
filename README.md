@@ -5,22 +5,31 @@
 <h1 align="center">BunkerVM</h1>
 
 <p align="center">
-  <strong>Run AI-generated code in disposable microVM sandboxes.</strong>
+  <code>pip install</code> a VM for your AI agent.
 </p>
 
 <p align="center">
   <a href="https://pypi.org/project/bunkervm/"><img src="https://img.shields.io/pypi/v/bunkervm?color=7c5cfc" alt="PyPI"></a>
-  <a href="https://github.com/ashishgituser/bunkervm"><img src="https://img.shields.io/github/stars/ashishgituser/bunkervm?style=flat&color=34d399" alt="Stars"></a>
+  <a href="https://github.com/ashishgituser/bunkervm"><img src="https://img.shields.io/github/stars/ashishgituser/bunkervm?style=social" alt="Stars"></a>
   <img src="https://img.shields.io/badge/isolation-hardware%20(KVM)-22d3ee" alt="Isolation">
   <img src="https://img.shields.io/badge/boot-~3s-fb923c" alt="Boot time">
   <img src="https://img.shields.io/badge/python-3.10+-blue" alt="Python">
+  <a href="https://github.com/ashishgituser/bunkervm/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-green" alt="License"></a>
 </p>
 
 <p align="center">
-  AI agents generate and execute code.<br>
-  Running that code on your machine is risky.<br>
-  <strong>BunkerVM runs it inside disposable microVM sandboxes — hardware-isolated, not containers.</strong>
+  Your AI agent can run <code>rm -rf /</code>. Let it — <strong>inside a bunker.</strong>
 </p>
+
+<p align="center">
+  <img src="docs/demo.svg" alt="BunkerVM Demo" width="780" />
+</p>
+
+---
+
+**The problem:** AI agents generate and execute code on _your_ machine. One bad LLM output and your files, credentials, or entire system could be gone. Docker shares the kernel — [container escapes are real](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=docker+escape). You need **hardware isolation**.
+
+**The fix:** BunkerVM boots a Firecracker microVM in **~3 seconds**, runs the code inside a throwaway Linux sandbox with its own kernel, and destroys everything after. One `pip install`. Zero config. Works with LangChain, OpenAI Agents SDK, CrewAI, and MCP out of the box.
 
 ---
 
@@ -28,10 +37,19 @@
 
 ```bash
 pip install bunkervm
-bunkervm demo
 ```
 
-> **Note:** BunkerVM needs access to `/dev/kvm`. If you get a permission error, either add your user to the `kvm` group (`sudo usermod -aG kvm $USER`, then re-login) or run with `sudo`.
+```python
+from bunkervm import run_code
+
+result = run_code("print('Hello from a microVM!')")
+print(result)  # Hello from a microVM!
+```
+
+One function. VM boots (~3s), code runs, VM dies. **Your host was never touched.**
+
+<details>
+<summary><strong>See <code>bunkervm demo</code> output</strong></summary>
 
 ```
   ╔══════════════════════════════════════╗
@@ -43,10 +61,6 @@ Starting BunkerVM...
 Launching Firecracker microVM...
 Running code inside sandbox...
 
-==================================================
-  BunkerVM — Hardware-Isolated Sandbox Demo
-==================================================
-
 OS:       Linux-6.1.102-x86_64-with
 Hostname: bunkervm
 Python:   3.12.12
@@ -54,48 +68,162 @@ Python:   3.12.12
 Prime numbers under 100:
 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97
 
-Found 25 primes
-
-File I/O test: Hello from BunkerVM!
-
 ✓ Code ran safely inside a Firecracker microVM
 ✓ Full Linux environment (not a container)
 ✓ Hardware-level isolation via KVM
 ✓ VM will be destroyed after this demo
 
-Destroying sandbox...
-Done.
-✓ Demo completed in 3.6s
+Done. ✓ Demo completed in 3.6s
 ```
 
-That code ran on a **real virtual machine** — not your host, not a container.
+</details>
 
 ---
 
-## Run Code Safely
+## Why Not Docker?
 
-```python
-from bunkervm import run_code
+|  | BunkerVM | Docker |
+|---|---|---|
+| **Isolation** | Hardware (KVM) — **separate kernel** | Shared kernel |
+| **Escape risk** | Near zero | [Container escapes exist](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=docker+escape) |
+| **Boot time** | ~3s | ~0.5s |
+| **Setup** | `pip install bunkervm` | Dockerfile + build + run |
 
-result = run_code("print('Hello from BunkerVM!')")
-print(result)  # Hello from BunkerVM!
+---
+
+## Framework Integrations
+
+Every integration auto-boots a Firecracker VM and exposes **6 sandboxed tools** — `run_command`, `write_file`, `read_file`, `list_directory`, `upload_file`, `download_file`.
+
+All toolkits inherit from `BunkerVMToolsBase` — identical behaviour regardless of framework.
+
+### LangChain / LangGraph
+
+```bash
+pip install bunkervm[langgraph] langchain-openai
 ```
 
-One function. VM boots, code runs, VM dies. Zero config.
-
 ```python
-# Multi-line code, any Python
-result = run_code("""
-import math
-primes = [n for n in range(2, 100) if all(n % i for i in range(2, int(math.sqrt(n))+1))]
-print(f"Found {len(primes)} primes")
-print(primes)
-""")
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from bunkervm.langchain import BunkerVMToolkit
+
+with BunkerVMToolkit() as toolkit:                  # boots VM (~3s)
+    agent = create_agent(
+        ChatOpenAI(model="gpt-4o"),
+        tools=toolkit.get_tools(),                  # 6 sandbox tools
+    )
+    agent.invoke({"messages": [("user", "Find primes under 100")]})
+# VM auto-destroyed
 ```
 
-### Reusable Sandbox
+<details>
+<summary>Agent execution output</summary>
 
-Keep the VM alive for multiple executions (faster — no re-boot between runs):
+```
+⏳ Booting sandbox VM...  ✅ Sandbox ready
+
+→ write_file: /tmp/primes.py (312 bytes)
+→ run_command: python3 /tmp/primes.py  ← OK (42ms)
+
+🤖 [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47,
+    53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
+
+🧹 Sandbox destroyed.
+```
+
+</details>
+
+### OpenAI Agents SDK
+
+```bash
+pip install bunkervm[openai-agents]
+```
+
+```python
+from agents import Agent, Runner
+from bunkervm.openai_agents import BunkerVMTools
+
+tools = BunkerVMTools()                              # boots VM (~3s)
+agent = Agent(
+    name="coder",
+    instructions="You write and run code inside a secure VM.",
+    tools=tools.get_tools(),                         # 6 sandbox tools
+)
+result = Runner.run_sync(agent, "First 20 Fibonacci numbers")
+print(result.final_output)
+tools.stop()
+```
+
+<details>
+<summary>Agent execution output</summary>
+
+```
+⏳ Booting sandbox VM...  ✅ Sandbox ready
+
+→ write_file: /tmp/fib.py (198 bytes)
+→ run_command: python3 /tmp/fib.py  ← OK (38ms)
+
+🤖 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377,
+   610, 987, 1597, 2584, 4181
+
+🧹 Sandbox destroyed.
+```
+
+</details>
+
+### CrewAI
+
+```bash
+pip install bunkervm[crewai]
+```
+
+```python
+from crewai import Agent, Task, Crew
+from bunkervm.crewai import BunkerVMCrewTools
+
+tools = BunkerVMCrewTools()                          # boots VM (~3s)
+coder = Agent(
+    role="Software Engineer",
+    goal="Write and test code inside a secure sandbox",
+    tools=tools.get_tools(),                         # 6 sandbox tools
+)
+task = Task(description="Bubble sort a random list", agent=coder,
+            expected_output="The sorted list")
+Crew(agents=[coder], tasks=[task]).kickoff()
+tools.stop()
+```
+
+<details>
+<summary>Agent execution output</summary>
+
+```
+⏳ Booting sandbox VM...  ✅ Sandbox ready
+
+🔧 write_file → /tmp/sort.py  ✅ 403 bytes
+🔧 run_command → python3 /tmp/sort.py
+   Original: [83, 11, 25, 19, 86, 52, 97, 5, 70, 69]
+   Sorted:   [5, 11, 19, 25, 52, 69, 70, 83, 86, 97]
+
+🧹 Sandbox destroyed.
+```
+
+</details>
+
+### Install all integrations
+
+```bash
+pip install bunkervm[all]    # LangChain + OpenAI Agents SDK + CrewAI
+```
+
+> Full working examples: [`examples/`](examples/)
+
+---
+
+## More Features
+
+<details>
+<summary><strong>Reusable Sandbox</strong> — Keep the VM alive for multiple runs</summary>
 
 ```python
 from bunkervm import Sandbox
@@ -109,247 +237,27 @@ with Sandbox() as sb:
 
 State persists between `run()` calls — variables, imports, everything stays.
 
-### From the CLI
+</details>
 
-```bash
-# Run a script
-bunkervm run script.py
-
-# Run inline code
-bunkervm run -c "print('Hello!')"
-
-# Check system readiness
-bunkervm info
-```
-
----
-
-## Secure AI Agents
-
-Make any AI agent's code execution safe with one line:
+<details>
+<summary><strong>Secure AI Agent</strong> — One-line agent sandboxing</summary>
 
 ```python
 from bunkervm import secure_agent
 
 runtime = secure_agent()
-result = runtime.run("print('This runs in a sandbox!')")
+result = runtime.run("print('Sandboxed!')")
 print(result)
 runtime.stop()
 ```
 
----
-
-## Framework Integrations
-
-Every integration auto-boots a Firecracker VM and gives your agent **6 sandboxed tools**:
-
-| Tool | What it does |
-|---|---|
-| `run_command` | Execute any shell command inside the VM |
-| `write_file` | Create / overwrite a file inside the VM |
-| `read_file` | Read a file from the VM |
-| `list_directory` | List files and folders in the VM |
-| `upload_file` | Upload a file from host → VM |
-| `download_file` | Download a file from VM → host |
-
-All toolkits share the same `BunkerVMToolsBase` — identical behaviour regardless of framework.
-
-### LangChain / LangGraph
-
-```bash
-pip install bunkervm[langgraph] langchain-openai python-dotenv
-```
-
-```python
-from langchain_openai import ChatOpenAI
-from langchain.agents import create_agent
-from bunkervm.langchain import BunkerVMToolkit
-
-toolkit = BunkerVMToolkit()   # boots a Firecracker VM (~3s)
-
-agent = create_agent(
-    ChatOpenAI(model="gpt-4o"),
-    tools=toolkit.get_tools(),  # 6 sandbox tools
-)
-result = agent.invoke({
-    "messages": [("user", "Write a Python script that finds primes under 100, then run it")]
-})
-
-toolkit.stop()   # destroy VM
-```
-
-> **Context manager** — `BunkerVMToolkit` supports `with` blocks:
-> ```python
-> with BunkerVMToolkit() as toolkit:
->     agent = create_agent(llm, toolkit.get_tools())
->     agent.invoke(...)
-> # VM auto-destroyed on exit
-> ```
+</details>
 
 <details>
-<summary>Agent execution output</summary>
+<summary><strong>Claude Desktop (MCP)</strong></summary>
 
-```
-🔒 BunkerVM + LangGraph Agent Demo
-=============================================
+Add to `claude_desktop_config.json`:
 
-⏳ Booting sandbox VM...
-✅ Sandbox ready
-
-Prompt: Write a Python script that finds all prime numbers under 100,
-        save it to /tmp/primes.py, run it, and show me the output.
-
-→ write_file: /tmp/primes.py (312 bytes)
-  ← wrote 312 bytes
-→ run_command: python3 /tmp/primes.py
-  ← OK (42ms, 89 bytes)
-
-🤖 The Python script was executed successfully, and here is the list of
-   all prime numbers under 100:
-
-   [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47,
-    53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
-
-🧹 Sandbox destroyed.
-```
-
-</details>
-<br>
-
-### OpenAI Agents SDK
-
-```bash
-pip install bunkervm[openai-agents] python-dotenv
-```
-
-```python
-from agents import Agent, Runner
-from bunkervm.openai_agents import BunkerVMTools
-
-tools = BunkerVMTools()   # boots a Firecracker VM (~3s)
-
-agent = Agent(
-    name="coder",
-    instructions="You write and run code inside a secure VM.",
-    tools=tools.get_tools(),  # 6 sandbox tools
-)
-
-result = Runner.run_sync(agent, "Calculate the first 20 Fibonacci numbers")
-print(result.final_output)
-tools.stop()
-```
-
-<details>
-<summary>Agent execution output</summary>
-
-```
-🔒 BunkerVM + OpenAI Agents SDK Demo
-=============================================
-
-⏳ Booting sandbox VM...
-✅ Sandbox ready
-
-Prompt: Write a Python script that generates the first 20 Fibonacci numbers,
-        save it to /tmp/fib.py, run it, and show me the output.
-
-→ write_file: /tmp/fib.py (198 bytes)
-  ← wrote 198 bytes
-→ run_command: python3 /tmp/fib.py
-  ← OK (38ms, 76 bytes)
-
-🤖 The script was executed successfully. The first 20 Fibonacci numbers are:
-
-   0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377,
-   610, 987, 1597, 2584, 4181
-
-🧹 Sandbox destroyed.
-```
-
-</details>
-<br>
-
-### CrewAI
-
-```bash
-pip install bunkervm[crewai] python-dotenv
-```
-
-```python
-from crewai import Agent, Task, Crew
-from bunkervm.crewai import BunkerVMCrewTools
-
-tools = BunkerVMCrewTools()   # boots a Firecracker VM (~3s)
-
-coder = Agent(
-    role="Software Engineer",
-    goal="Write and test code inside a secure sandbox",
-    tools=tools.get_tools(),  # 6 sandbox tools
-)
-task = Task(
-    description="Write a bubble sort script and run it",
-    agent=coder,
-    expected_output="The sorted list of numbers",
-)
-Crew(agents=[coder], tasks=[task]).kickoff()
-tools.stop()
-```
-
-<details>
-<summary>Agent execution output</summary>
-
-```
-🔒 BunkerVM + CrewAI Demo
-=============================================
-
-⏳ Booting sandbox VM...
-✅ Sandbox ready
-
-╭──── 🚀 Crew Execution Started ────╮
-│  Name: crew                       │
-╰───────────────────────────────────╯
-
-╭──── 📋 Task Started ────╮
-│  Write a Python script that sorts a list of 10 random numbers  │
-│  using bubble sort. Save it to /tmp/sort.py, run it.           │
-╰────────────────────────╯
-
-🔧 Tool: write_file
-   Args: {path: /tmp/sort.py, content: "..."}
-   ✅ Wrote 403 bytes to /tmp/sort.py
-
-🔧 Tool: run_command
-   Args: {command: python3 /tmp/sort.py}
-   ✅ Original list: [83, 11, 25, 19, 86, 52, 97, 5, 70, 69]
-      Sorted list:   [5, 11, 19, 25, 52, 69, 70, 83, 86, 97]
-
-╭──── ✅ Agent Final Answer ────╮
-│  Original list: [83, 11, 25, 19, 86, 52, 97, 5, 70, 69]  │
-│  Sorted list:   [5, 11, 19, 25, 52, 69, 70, 83, 86, 97]  │
-╰───────────────────────────────╯
-
-🤖 Result: Sorted list: [5, 11, 19, 25, 52, 69, 70, 83, 86, 97]
-
-🧹 Sandbox destroyed.
-```
-
-</details>
-<br>
-
-### All extras
-
-```bash
-pip install bunkervm[all]    # LangChain + OpenAI Agents SDK + CrewAI
-```
-
-> Full working examples for each framework: [`examples/`](examples/)
-
----
-
-### With Claude Desktop (MCP)
-
-Add to your Claude Desktop config (`claude_desktop_config.json`):
-
-**Linux:**
 ```json
 {
   "mcpServers": {
@@ -361,7 +269,7 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 }
 ```
 
-**Windows (WSL2):**
+Windows (WSL2):
 ```json
 {
   "mcpServers": {
@@ -373,25 +281,39 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 }
 ```
 
----
+</details>
 
-## Why Not Docker?
+<details>
+<summary><strong>Multi-VM Support</strong> — Run multiple sandboxes simultaneously</summary>
 
-|  | BunkerVM | Docker |
-|---|---|---|
-| **Isolation** | Hardware (KVM) — separate kernel | Shared kernel |
-| **Escape risk** | Near zero | Container escapes exist |
-| **Boot time** | ~3s | ~0.5s |
-| **Self-hosted** | ✓ | ✓ |
-| **Setup** | `pip install bunkervm` | Dockerfile + build + run |
+```python
+from bunkervm import VMPool
 
-BunkerVM runs each agent in a **real virtual machine**. If the agent goes rogue, it can't touch your host.
+pool = VMPool(max_vms=5)
+pool.start("agent-1", cpus=2, memory=1024)
+pool.start("agent-2", cpus=1, memory=512)
 
----
+pool.client("agent-1").exec("echo 'I am agent 1'")
+pool.client("agent-2").exec("echo 'I am agent 2'")
+pool.stop_all()
+```
 
-## MCP Tools
+</details>
 
-When running as an MCP server, BunkerVM exposes 8 tools:
+<details>
+<summary><strong>Web Dashboard</strong></summary>
+
+```bash
+bunkervm server --transport sse --dashboard
+# Dashboard at http://localhost:3001/dashboard
+```
+
+Real-time monitoring: VM status, CPU, memory, live audit log, and reset controls.
+
+</details>
+
+<details>
+<summary><strong>MCP Tools</strong> — 8 tools exposed via MCP server</summary>
 
 | Tool | Description |
 |---|---|
@@ -404,33 +326,10 @@ When running as an MCP server, BunkerVM exposes 8 tools:
 | `sandbox_status` | Check VM health, CPU, RAM |
 | `sandbox_reset` | Wipe sandbox, start fresh |
 
-## Multi-VM Support
+</details>
 
-Run multiple isolated sandboxes simultaneously:
-
-```python
-from bunkervm import VMPool
-
-pool = VMPool(max_vms=5)
-pool.start("agent-1", cpus=2, memory=1024)
-pool.start("agent-2", cpus=1, memory=512)
-
-pool.client("agent-1").exec("echo 'I am agent 1'")
-pool.client("agent-2").exec("echo 'I am agent 2'")
-
-pool.stop_all()
-```
-
-## Web Dashboard
-
-```bash
-bunkervm server --transport sse --dashboard
-# Dashboard at http://localhost:3001/dashboard
-```
-
-Real-time monitoring: VM status, CPU, memory, running VMs, live audit log, and reset controls.
-
-## CLI Reference
+<details>
+<summary><strong>CLI Reference</strong></summary>
 
 ```
 bunkervm demo                        # See it in action
@@ -447,43 +346,7 @@ Options:
   --dashboard       Enable web dashboard (server mode)
 ```
 
----
-
-## Requirements
-
-- **Linux** with KVM (Ubuntu, Debian, Fedora, etc.)
-- **Windows** — WSL2 with nested virtualization enabled
-- **macOS** — Not supported (no KVM)
-- Python 3.10+
-- ~100MB disk (bundle auto-downloaded on first run)
-
-### KVM Access
-
-BunkerVM needs `/dev/kvm`. Most Linux systems and WSL2 have it. Check with:
-
-```bash
-bunkervm info    # Shows ✓ or ✗ for KVM status
-```
-
-If KVM exists but you get permission errors:
-
-```bash
-# Option 1: Add yourself to the kvm group (recommended, one-time)
-sudo usermod -aG kvm $USER
-# Then log out and log back in
-
-# Option 2: Open permissions (quick fix)
-sudo chmod 666 /dev/kvm
-```
-
-### WSL2 Setup (Windows)
-
-Add to `%USERPROFILE%\.wslconfig`:
-```ini
-[wsl2]
-nestedVirtualization=true
-```
-Then restart WSL: `wsl --shutdown`
+</details>
 
 ---
 
@@ -506,8 +369,7 @@ Your AI Agent
 
 - **[Firecracker](https://firecracker-microvm.github.io/)** — Amazon's micro-VM engine (powers AWS Lambda)
 - **vsock** — Zero-config host↔VM communication
-- **exec_agent** — Lightweight HTTP server inside the VM
-- **~100MB bundle** — Firecracker + kernel + rootfs, downloaded once to `~/.bunkervm/`
+- **~100MB bundle** — Firecracker + kernel + rootfs, auto-downloaded on first run
 
 ---
 
@@ -521,38 +383,57 @@ pip install bunkervm[crewai]          # + CrewAI
 pip install bunkervm[all]             # Everything
 ```
 
-## Troubleshooting
+**Requirements:** Linux with KVM, or Windows WSL2 with nested virtualization. Python 3.10+.
+
+> Need `/dev/kvm` access? Run `bunkervm info` to diagnose, or `sudo usermod -aG kvm $USER` then re-login.
+
+<details>
+<summary><strong>WSL2 Setup (Windows)</strong></summary>
+
+Add to `%USERPROFILE%\.wslconfig`:
+```ini
+[wsl2]
+nestedVirtualization=true
+```
+Then restart WSL: `wsl --shutdown`
+
+</details>
+
+<details>
+<summary><strong>Troubleshooting</strong></summary>
 
 | Problem | Solution |
 |---|---|
-| `bunkervm: command not found` with sudo | Use `sudo $(which bunkervm) demo` or add user to kvm group instead |
-| `/dev/kvm not found` | Enable KVM: `sudo modprobe kvm` or enable nested virtualization in WSL2 |
+| `bunkervm: command not found` with sudo | `sudo $(which bunkervm) demo` or add user to kvm group |
+| `/dev/kvm not found` | `sudo modprobe kvm` or enable nested virtualization in WSL2 |
 | `Permission denied: /dev/kvm` | `sudo usermod -aG kvm $USER` then re-login |
-| Bundle download fails | Manually download from [GitHub Releases](https://github.com/ashishgituser/bunkervm/releases) and extract to `~/.bunkervm/bundle/` |
-| VM fails to start | Run `bunkervm info` to diagnose — it checks all prerequisites |
+| Bundle download fails | Download from [Releases](https://github.com/ashishgituser/bunkervm/releases) → `~/.bunkervm/bundle/` |
+| VM fails to start | `bunkervm info` — diagnoses all prerequisites |
 
-## For Contributors
+</details>
 
 <details>
-<summary>Building from source</summary>
+<summary><strong>Building from source</strong></summary>
 
 ```bash
 git clone https://github.com/ashishgituser/bunkervm.git
 cd bunkervm
-
-# Build the micro-OS (needs Linux/WSL2 + sudo)
 sudo bash build/setup-firecracker.sh
 sudo bash build/build-sandbox-rootfs.sh
-
-# Install in dev mode
 pip install -e ".[dev]"
-
-# Run
 bunkervm demo
 ```
 
 </details>
 
+---
+
 ## License
 
 AGPL-3.0 — Free for personal and open-source use.
+
+---
+
+<p align="center">
+  <strong>If BunkerVM helps you ship safer agents, <a href="https://github.com/ashishgituser/bunkervm">give it a star ⭐</a></strong>
+</p>
