@@ -847,7 +847,7 @@
             <div class="reveal">
                 <div class="hero-badge">
                     <span class="dot"></span>
-                    v0.6.0 — Now on PyPI
+                    v0.7.2 — VS Code + Copilot Integration
                 </div>
             </div>
 
@@ -1041,7 +1041,7 @@
 <span style="color: var(--green);">$</span> bunkervm vscode-setup
 
   Platform:  <span style="color: var(--cyan);">Windows + WSL2 (Ubuntu)</span>
-  <span style="color: var(--green);">&#10003;</span> Installed BunkerVM in WSL: <span style="color: var(--cyan);">0.7.0</span>
+  <span style="color: var(--green);">&#10003;</span> BunkerVM in WSL: <span style="color: var(--cyan);">ready</span>
   <span style="color: var(--green);">&#10003;</span> Created .vscode/mcp.json
 
 <span style="color: var(--text-muted);">  Reload VS Code &rarr; Open Copilot Chat &rarr; Done.</span></pre>
@@ -1096,9 +1096,8 @@
     <span class="key">"bunkervm"</span>: {
       <span class="key">"command"</span>: <span class="str">"wsl"</span>,
       <span class="key">"args"</span>: [<span class="str">"-d"</span>, <span class="str">"Ubuntu"</span>,
-        <span class="str">"--"</span>, <span class="str">"sudo"</span>,
-        <span class="str">"python3"</span>, <span class="str">"-m"</span>,
-        <span class="str">"bunkervm"</span>]
+        <span class="str">"--"</span>, <span class="str">"bunkervm"</span>,
+        <span class="str">"server"</span>]
     }
   }
 }</pre>
@@ -1111,10 +1110,8 @@
                     <pre>{
   <span class="key">"mcpServers"</span>: {
     <span class="key">"bunkervm"</span>: {
-      <span class="key">"command"</span>: <span class="str">"sudo"</span>,
-      <span class="key">"args"</span>: [<span class="str">"python3"</span>,
-        <span class="str">"-m"</span>,
-        <span class="str">"bunkervm"</span>]
+      <span class="key">"command"</span>: <span class="str">"bunkervm"</span>,
+      <span class="key">"args"</span>: [<span class="str">"server"</span>]
     }
   }
 }</pre>
@@ -1375,10 +1372,10 @@ Sorted:   [5, 11, 19, 25, 52,
                 lines: [
                     { type: 'cmd', prompt: '$ ', text: 'pip install bunkervm[langgraph]' },
                     { type: 'output', text: 'Collecting bunkervm[langgraph]' },
-                    { type: 'output', text: '  Downloading bunkervm-0.5.0.tar.gz (52 kB)' },
-                    { type: 'success', text: 'Successfully installed bunkervm-0.5.0' },
+                    { type: 'output', text: '  Downloading bunkervm-0.7.2-py3-none-any.whl (52 kB)' },
+                    { type: 'success', text: 'Successfully installed bunkervm-0.7.2' },
                     { type: 'output', text: '' },
-                    { type: 'cmd', prompt: '$ ', text: 'sudo python3 -m bunkervm &' },
+                    { type: 'cmd', prompt: '$ ', text: 'bunkervm server &' },
                     { type: 'info', text: '⚡ Downloading BunkerVM bundle (first run)...' },
                     { type: 'success', text: '✓ Bundle ready (98MB)' },
                     { type: 'info', text: '⚡ Booting Firecracker MicroVM...' },

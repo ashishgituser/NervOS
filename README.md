@@ -336,8 +336,8 @@ Add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "bunkervm": {
-      "command": "python3",
-      "args": ["-m", "bunkervm"]
+      "command": "bunkervm",
+      "args": ["server"]
     }
   }
 }
@@ -349,7 +349,7 @@ Windows (WSL2):
   "mcpServers": {
     "bunkervm": {
       "command": "wsl",
-      "args": ["-d", "Ubuntu", "--", "python3", "-m", "bunkervm"]
+      "args": ["-d", "Ubuntu", "--", "bunkervm", "server"]
     }
   }
 }
