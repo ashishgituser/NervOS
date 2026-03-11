@@ -263,6 +263,10 @@ Open Copilot Chat and ask:
 - *"Fetch the top 3 Hacker News posts in the sandbox"*
 - *"Run `uname -a` in the sandbox to show me the VM's kernel"*
 
+### Demo
+
+<video src="docs/BunkerVMVSCodeDemo.mp4" controls width="100%" alt="BunkerVM VS Code + Copilot demo"></video>
+
 <details>
 <summary>What <code>bunkervm vscode-setup</code> generates</summary>
 
