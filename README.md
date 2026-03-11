@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.svg" alt="BunkerVM Demo" width="780" />
+  <img src="docs/demo.gif" alt="BunkerVM Demo" width="780" />
 </p>
 
 ---
@@ -220,6 +220,80 @@ pip install bunkervm[all]    # LangChain + OpenAI Agents SDK + CrewAI
 
 ---
 
+## VS Code + Copilot
+
+> **Every line of code Copilot runs — hardware-isolated.** Two commands. No extensions to install.
+
+### Setup (30 seconds)
+
+```bash
+pip install bunkervm
+bunkervm vscode-setup
+```
+
+That's it. Reload VS Code (`Ctrl+Shift+P` → "Reload Window"). Copilot Chat now has 8 sandboxed tools.
+
+### Enable internet inside the VM (optional, one-time)
+
+By default the VM has no internet. To enable it:
+
+```bash
+# Linux / WSL:
+sudo bunkervm enable-network
+
+# Windows:
+wsl -d Ubuntu -- sudo bunkervm enable-network
+```
+
+Then re-run `bunkervm vscode-setup` to update the config.
+
+### How it works
+
+1. `bunkervm vscode-setup` generates `.vscode/mcp.json` — auto-detects your OS
+2. VS Code starts BunkerVM as an MCP server
+3. A Firecracker microVM boots (~3s) with its own Linux kernel
+4. Copilot Chat gets 8 tools: `sandbox_exec`, `sandbox_write_file`, `sandbox_read_file`, `sandbox_list_dir`, `sandbox_upload_file`, `sandbox_download_file`, `sandbox_status`, `sandbox_reset`
+5. When Copilot writes code → it runs inside the VM → your host is never touched
+
+### Try it
+
+Open Copilot Chat and ask:
+
+- *"Write a Python script that finds primes under 1000, save it, and run it in the sandbox"*
+- *"Fetch the top 3 Hacker News posts in the sandbox"*
+- *"Run `uname -a` in the sandbox to show me the VM's kernel"*
+
+<details>
+<summary>What <code>bunkervm vscode-setup</code> generates</summary>
+
+Linux:
+```json
+{
+  "servers": {
+    "bunkervm": {
+      "command": "python3",
+      "args": ["-m", "bunkervm"]
+    }
+  }
+}
+```
+
+Windows (auto-detected, wraps via WSL2):
+```json
+{
+  "servers": {
+    "bunkervm": {
+      "command": "wsl",
+      "args": ["-d", "Ubuntu", "--", "python3", "-m", "bunkervm"]
+    }
+  }
+}
+```
+
+</details>
+
+---
+
 ## More Features
 
 <details>
@@ -337,6 +411,8 @@ bunkervm run script.py               # Run a script in a sandbox
 bunkervm run -c "print(42)"          # Run inline code
 bunkervm server --transport sse      # Start MCP server
 bunkervm info                        # Check system readiness
+bunkervm vscode-setup                # Set up VS Code MCP integration
+bunkervm enable-network              # One-time: enable VM networking (needs sudo)
 
 Options:
   --cpus N          vCPUs (default: 1 for run, 2 for server)

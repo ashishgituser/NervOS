@@ -28,8 +28,8 @@ import logging
 import sys
 
 
-# Route new CLI subcommands (demo, run, info) to the new CLI
-_CLI_COMMANDS = {"demo", "run", "info", "server"}
+# Route new CLI subcommands (demo, run, info, vscode-setup, enable-network) to the new CLI
+_CLI_COMMANDS = {"demo", "run", "info", "server", "vscode-setup", "enable-network"}
 
 
 def main():

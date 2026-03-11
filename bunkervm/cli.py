@@ -7,6 +7,8 @@ Commands:
     bunkervm run -c "print(42)"     # Run inline code
     bunkervm server                 # Start MCP server (existing behavior)
     bunkervm info                   # Show system info and readiness
+    bunkervm vscode-setup           # Set up VS Code MCP integration
+    bunkervm enable-network         # One-time: enable VM networking without sudo
 
 Usage:
     pip install bunkervm
@@ -259,6 +261,198 @@ def cmd_info(args: argparse.Namespace) -> int:
     return 0
 
 
+# ── VS Code Setup Command ──
+
+
+_SUDOERS_FILE = "/etc/sudoers.d/bunkervm"
+
+
+def _is_network_enabled() -> bool:
+    """Check if passwordless sudo for networking commands is configured."""
+    if sys.platform == "win32":
+        # On Windows, check via WSL
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["wsl", "-d", "Ubuntu", "--", "sudo", "-n", "ip", "link", "show"],
+                capture_output=True, timeout=5,
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+    else:
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["sudo", "-n", "ip", "link", "show"],
+                capture_output=True, timeout=5,
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+
+
+def cmd_vscode_setup(args: argparse.Namespace) -> int:
+    """Generate .vscode/mcp.json for VS Code MCP integration."""
+    import json
+    import platform
+    import shutil
+
+    workspace = os.getcwd()
+    vscode_dir = os.path.join(workspace, ".vscode")
+    mcp_path = os.path.join(vscode_dir, "mcp.json")
+
+    _print(f"\n{_BOLD}BunkerVM — VS Code MCP Setup{_RESET}\n")
+
+    # Detect environment
+    is_wsl = "microsoft" in platform.uname().release.lower()
+    is_windows = sys.platform == "win32"
+    python_bin = shutil.which("python3") or shutil.which("python") or "python3"
+
+    if is_windows:
+        # Running from Windows — need WSL wrapper
+        config = {
+            "servers": {
+                "bunkervm": {
+                    "command": "wsl",
+                    "args": ["-d", "Ubuntu", "--", "python3", "-m", "bunkervm", "--no-network"]
+                }
+            }
+        }
+        _print(f"  Platform:  {_CYAN}Windows (using WSL2){_RESET}")
+    else:
+        # Linux or WSL directly
+        config = {
+            "servers": {
+                "bunkervm": {
+                    "command": python_bin,
+                    "args": ["-m", "bunkervm", "--no-network"]
+                }
+            }
+        }
+        _print(f"  Platform:  {_CYAN}Linux{_RESET}")
+
+    # Check if file already exists
+    if os.path.exists(mcp_path):
+        try:
+            with open(mcp_path, "r") as f:
+                existing = json.load(f)
+            if "servers" in existing and "bunkervm" in existing.get("servers", {}):
+                _print(f"  {_CHECK} BunkerVM already configured in {mcp_path}")
+                _print(f"\n  {_DIM}To reconfigure, delete .vscode/mcp.json and run again.{_RESET}\n")
+                return 0
+            # Merge into existing config
+            existing.setdefault("servers", {})
+            existing["servers"]["bunkervm"] = config["servers"]["bunkervm"]
+            config = existing
+            _print(f"  {_ARROW} Merging into existing mcp.json")
+        except (json.JSONDecodeError, OSError):
+            _print(f"  {_YELLOW}! Existing mcp.json is invalid, overwriting{_RESET}")
+
+    # Create .vscode/ if needed
+    os.makedirs(vscode_dir, exist_ok=True)
+
+    # Write config
+    with open(mcp_path, "w") as f:
+        json.dump(config, f, indent=2)
+        f.write("\n")
+
+    _print(f"  {_CHECK} Created {mcp_path}")
+    _print()
+    _print(f"  {_BOLD}What's next:{_RESET}")
+    _print(f"  1. Open this folder in VS Code")
+    _print(f"  2. Open Copilot Chat (Ctrl+Shift+I)")
+    _print(f"  3. Ask: {_CYAN}\"Run this Python script in the sandbox\"{_RESET}")
+    _print(f"  4. Copilot will use BunkerVM's 8 sandboxed tools automatically")
+    _print()
+    _print(f"  {_DIM}Tools: sandbox_exec, sandbox_write_file, sandbox_read_file,{_RESET}")
+    _print(f"  {_DIM}       sandbox_list_dir, sandbox_upload_file, sandbox_download_file,{_RESET}")
+    _print(f"  {_DIM}       sandbox_status, sandbox_reset{_RESET}")
+    _print()
+    return 0
+
+
+# ── Enable Network Command ──
+
+
+def cmd_enable_network(args: argparse.Namespace) -> int:
+    """Configure passwordless sudo for VM networking (one-time setup)."""
+    import subprocess
+    import getpass
+
+    _print(f"\n{_BOLD}BunkerVM \u2014 Enable VM Networking{_RESET}\n")
+
+    if sys.platform == "win32":
+        _print(f"  {_YELLOW}! This command must be run inside WSL, not Windows.{_RESET}")
+        _print(f"  Run: {_CYAN}wsl -d Ubuntu -- sudo bunkervm enable-network{_RESET}\n")
+        return 1
+
+    # Must be run as root
+    if os.geteuid() != 0:
+        _print(f"  {_CROSS} This command requires sudo.")
+        _print(f"  Run: {_CYAN}sudo bunkervm enable-network{_RESET}\n")
+        return 1
+
+    # Get the actual user (not root)
+    user = os.environ.get("SUDO_USER", getpass.getuser())
+
+    # Check if already configured
+    if os.path.exists(_SUDOERS_FILE):
+        _print(f"  {_CHECK} Already configured: {_SUDOERS_FILE}")
+        _print(f"  {_DIM}To reset, delete {_SUDOERS_FILE} and run again.{_RESET}\n")
+        return 0
+
+    # Find actual paths for ip, sysctl, iptables
+    import shutil
+    ip_bin = shutil.which("ip") or "/usr/sbin/ip"
+    sysctl_bin = shutil.which("sysctl") or "/usr/sbin/sysctl"
+    iptables_bin = shutil.which("iptables") or "/usr/sbin/iptables"
+
+    sudoers_content = (
+        f"# BunkerVM: allow passwordless networking for VM setup\n"
+        f"# Created by: bunkervm enable-network\n"
+        f"# Safe to remove: sudo rm {_SUDOERS_FILE}\n"
+        f"{user} ALL=(ALL) NOPASSWD: {ip_bin}\n"
+        f"{user} ALL=(ALL) NOPASSWD: {sysctl_bin}\n"
+        f"{user} ALL=(ALL) NOPASSWD: {iptables_bin}\n"
+    )
+
+    # Write sudoers file
+    try:
+        with open(_SUDOERS_FILE, "w") as f:
+            f.write(sudoers_content)
+        os.chmod(_SUDOERS_FILE, 0o440)
+
+        # Validate with visudo
+        result = subprocess.run(
+            ["visudo", "-c", "-f", _SUDOERS_FILE],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            os.remove(_SUDOERS_FILE)
+            _print(f"  {_CROSS} Sudoers validation failed: {result.stderr.strip()}")
+            return 1
+
+    except OSError as e:
+        _print(f"  {_CROSS} Failed to write {_SUDOERS_FILE}: {e}")
+        return 1
+
+    _print(f"  {_CHECK} Created {_SUDOERS_FILE}")
+    _print(f"  {_CHECK} User '{user}' can now create VM networks without a password")
+    _print()
+    _print(f"  {_BOLD}Granted passwordless sudo for:{_RESET}")
+    _print(f"    {_DIM}{ip_bin}{_RESET}       (TAP device setup)")
+    _print(f"    {_DIM}{sysctl_bin}{_RESET}   (IP forwarding)")
+    _print(f"    {_DIM}{iptables_bin}{_RESET} (NAT rules)")
+    _print()
+    _print(f"  {_BOLD}Next:{_RESET} Re-run {_CYAN}bunkervm vscode-setup{_RESET} to update VS Code config,")
+    _print(f"        or restart the MCP server in VS Code.")
+    _print()
+    _print(f"  {_DIM}To undo: sudo rm {_SUDOERS_FILE}{_RESET}")
+    _print()
+    return 0
+
+
 # ── Main CLI Parser ──
 
 
@@ -275,6 +469,8 @@ examples:
   bunkervm run -c "print(42)"          Run inline code
   bunkervm server --transport sse      Start MCP server
   bunkervm info                        Check system readiness
+  bunkervm vscode-setup                Set up VS Code MCP integration
+  bunkervm enable-network              Enable VM networking (one-time, needs sudo)
 """,
     )
     sub = parser.add_subparsers(dest="command")
@@ -314,6 +510,14 @@ examples:
     # ── info ──
     info_p = sub.add_parser("info", help="Show system info and readiness")
     info_p.set_defaults(func=cmd_info)
+
+    # ── vscode-setup ──
+    vs_p = sub.add_parser("vscode-setup", help="Set up VS Code MCP integration")
+    vs_p.set_defaults(func=cmd_vscode_setup)
+
+    # ── enable-network ──
+    net_p = sub.add_parser("enable-network", help="Enable VM networking without sudo (one-time)")
+    net_p.set_defaults(func=cmd_enable_network)
 
     args = parser.parse_args()
 
