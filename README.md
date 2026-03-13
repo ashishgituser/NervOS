@@ -5,7 +5,8 @@
 <h1 align="center">BunkerVM</h1>
 
 <p align="center">
-  <code>pip install</code> a VM for your AI agent.
+  <strong>Docker Desktop for AI sandboxing.</strong><br>
+  Double-click to install. Hardware-isolated VMs for your AI agents.
 </p>
 
 <p align="center">
@@ -21,19 +22,37 @@
   Your AI agent can run <code>rm -rf /</code>. Let it — <strong>inside a bunker.</strong>
 </p>
 
+---
+
+## BunkerDesktop — One-Click Sandbox Manager
+
 <p align="center">
-  <img src="docs/demo.gif" alt="BunkerVM Demo" width="780" />
+  <img src="docs/BunkerDesktop.png" alt="BunkerDesktop — Desktop App" width="800" />
 </p>
 
+**BunkerDesktop** is the easiest way to run BunkerVM. Download the installer, double-click, done.
+
+- **Native Windows app** — no browser, no terminal, no Docker
+- **Automatic WSL2 + backend setup** — the installer handles everything
+- **Dashboard** — create, monitor, and destroy sandboxes with a click
+- **Live logs** — filter by sandbox, log level, auto-scroll
+- **Start on login** — engine runs in the background, always ready
+
+### Install
+
+1. Download **BunkerDesktopSetup.exe** from [Releases](https://github.com/ashishgituser/bunkervm/releases)
+2. Run the installer — it sets up WSL2, installs the backend, creates shortcuts
+3. Launch BunkerDesktop from your desktop
+
+That's it. No `pip install`, no WSL commands, no config files.
+
+> **VS Code + Copilot users:** BunkerDesktop runs the engine in the background. Once it's running, Copilot Chat automatically connects to it — every tool call runs in a hardware-isolated VM.
+
 ---
 
-**The problem:** AI agents generate and execute code on _your_ machine. One bad LLM output and your files, credentials, or entire system could be gone. Docker shares the kernel — [container escapes are real](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=docker+escape). You need **hardware isolation**.
+## For Developers — `pip install bunkervm`
 
-**The fix:** BunkerVM boots a Firecracker microVM in **~3 seconds**, runs the code inside a throwaway Linux sandbox with its own kernel, and destroys everything after. One `pip install`. Zero config. Works with LangChain, OpenAI Agents SDK, CrewAI, and MCP out of the box.
-
----
-
-## Quick Start
+If you prefer the command line or want to integrate BunkerVM into your own code:
 
 ```bash
 pip install bunkervm
@@ -80,14 +99,24 @@ Done. ✓ Demo completed in 3.6s
 
 ---
 
+## The Problem
+
+AI agents generate and execute code on _your_ machine. One bad LLM output and your files, credentials, or entire system could be gone. Docker shares the kernel — [container escapes are real](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=docker+escape). You need **hardware isolation**.
+
+**The fix:** BunkerVM boots a Firecracker microVM in **~3 seconds**, runs the code inside a throwaway Linux sandbox with its own kernel, and destroys everything after.
+
+---
+
 ## Why Not Docker?
 
-|  | BunkerVM | Docker |
-|---|---|---|
-| **Isolation** | Hardware (KVM) — **separate kernel** | Shared kernel |
-| **Escape risk** | Near zero | [Container escapes exist](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=docker+escape) |
-| **Boot time** | ~3s | ~0.5s |
-| **Setup** | `pip install bunkervm` | Dockerfile + build + run |
+|  | BunkerDesktop | BunkerVM (CLI) | Docker |
+|---|---|---|---|
+| **Setup** | Double-click installer | `pip install bunkervm` | Dockerfile + build + run |
+| **Isolation** | Hardware (KVM) | Hardware (KVM) | Shared kernel |
+| **Escape risk** | Near zero | Near zero | [Container escapes exist](https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=docker+escape) |
+| **Boot time** | ~3s | ~3s | ~0.5s |
+| **Dashboard** | Built-in GUI | Web dashboard | Docker Desktop |
+| **Target user** | Everyone | Developers | DevOps |
 
 ---
 
@@ -222,9 +251,13 @@ pip install bunkervm[all]    # LangChain + OpenAI Agents SDK + CrewAI
 
 ## VS Code + Copilot
 
-> **Every line of code Copilot runs — hardware-isolated.** Two commands. No extensions to install.
+> **Every line of code Copilot runs — hardware-isolated.**
 
-### Setup (30 seconds)
+### Option A: BunkerDesktop (recommended)
+
+Just install BunkerDesktop and it works. The engine runs in the background and VS Code auto-connects.
+
+### Option B: Manual setup (2 commands)
 
 ```bash
 pip install bunkervm
@@ -454,6 +487,12 @@ Your AI Agent
 ---
 
 ## Install
+
+### Desktop Users (Windows)
+
+Download **BunkerDesktopSetup.exe** from [Releases](https://github.com/ashishgituser/bunkervm/releases) — everything is automatic.
+
+### Developers
 
 ```bash
 pip install bunkervm                  # Core

@@ -807,6 +807,7 @@
             .arch-flow { flex-direction: column; }
             .arch-arrow { transform: rotate(90deg); padding: 12px 0; }
             .tools-grid { grid-template-columns: 1fr; }
+            .tools-grid[style*="repeat(4"] { grid-template-columns: repeat(2, 1fr) !important; }
             .comparison { grid-template-columns: 1fr; }
             .setup-cards { grid-template-columns: 1fr; }
             .limits-bar { flex-direction: column; gap: 16px; }
@@ -831,6 +832,7 @@
         <div class="container">
             <a href="#" class="logo"><img src="logo.svg" alt="BunkerVM">BunkerVM</a>
             <div class="nav-links">
+                <a href="#desktop" class="hide-mobile">Desktop</a>
                 <a href="#architecture" class="hide-mobile">Architecture</a>
                 <a href="#tools" class="hide-mobile">Tools</a>
                 <a href="#langgraph" class="hide-mobile">LangGraph</a>
@@ -847,16 +849,16 @@
             <div class="reveal">
                 <div class="hero-badge">
                     <span class="dot"></span>
-                    v0.7.2 — VS Code + Copilot Integration
+                    v0.7.2 — BunkerDesktop + VS Code + Copilot
                 </div>
             </div>
 
             <h1 class="reveal reveal-delay-1">
-                Give your AI agent<br><span class="gradient-text">its own computer</span>
+                Docker Desktop for<br><span class="gradient-text">AI sandboxing</span>
             </h1>
 
             <p class="subtitle reveal reveal-delay-2">
-                A self-hosted sandbox that boots a real virtual machine for AI agents. Hardware-isolated by Firecracker. No containers. No cloud.
+                Double-click to install. Hardware-isolated VMs for your AI agents. No containers. No cloud. No config.
             </p>
 
             <!-- Terminal Demo -->
@@ -873,14 +875,60 @@
             </div>
 
             <div class="hero-buttons reveal reveal-delay-4">
-                <a href="https://github.com/ashishgituser/bunkervm" class="btn btn-glow" target="_blank">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
-                    View on GitHub
+                <a href="https://github.com/ashishgituser/bunkervm/releases" class="btn btn-glow" target="_blank">
+                    &#11015; Download BunkerDesktop
                 </a>
-                <a href="#setup" class="btn btn-ghost">Quick Setup</a>
+                <a href="https://github.com/ashishgituser/bunkervm" class="btn btn-ghost" target="_blank">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+                    GitHub
+                </a>
+                <a href="#setup" class="btn btn-ghost">pip install</a>
             </div>
         </div>
     </div>
+
+    <!-- BunkerDesktop Section -->
+    <section id="desktop" style="padding-top: 40px; padding-bottom: 60px;">
+        <div class="container">
+            <div class="section-label reveal">New</div>
+            <h2 class="reveal">BunkerDesktop &mdash; sandbox manager</h2>
+            <p class="section-desc reveal">A native desktop app that manages Firecracker microVMs. Install it, launch it, done. No terminal needed.</p>
+
+            <div class="reveal" style="margin-bottom: 40px;">
+                <div style="max-width: 900px; margin: 0 auto; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 40px var(--accent-dim);">
+                    <img src="BunkerDesktop.png" alt="BunkerDesktop — Sandbox Manager" style="width: 100%; display: block; background: #0a0a14;" />
+                </div>
+            </div>
+
+            <div class="tools-grid reveal" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="tool-card">
+                    <div class="tool-icon">&#128187;</div>
+                    <h3>Native App</h3>
+                    <p>Real desktop window. No browser. Uses WebView2 (built into Windows).</p>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">&#9889;</div>
+                    <h3>One-Click Install</h3>
+                    <p>Installer sets up WSL2, backend, shortcuts. Just double-click.</p>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">&#128202;</div>
+                    <h3>Dashboard</h3>
+                    <p>Create, monitor, destroy sandboxes. Live logs with filters.</p>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">&#128268;</div>
+                    <h3>Always Ready</h3>
+                    <p>Engine starts on login. VS Code + Copilot auto-connects.</p>
+                </div>
+            </div>
+
+            <div class="reveal" style="margin-top: 32px; text-align: center;">
+                <a href="https://github.com/ashishgituser/bunkervm/releases" class="btn btn-glow" target="_blank">&#11015; Download for Windows</a>
+                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 12px;">Requires Windows 10/11 with WSL2 support</p>
+            </div>
+        </div>
+    </section>
 
     <!-- Stats -->
     <div class="stats-bar reveal">
@@ -1135,6 +1183,7 @@
             <p class="section-desc reveal">Native toolkits for LangChain, OpenAI, and CrewAI. Plus full <a href="https://modelcontextprotocol.io" target="_blank" style="color: var(--accent-light); text-decoration: none;">MCP</a> support for any compatible client.</p>
 
             <div class="compat-row reveal">
+                <div class="compat-chip" style="border-color: var(--accent); color: var(--accent-light);"><span class="chip-dot" style="background: var(--accent);"></span> BunkerDesktop</div>
                 <div class="compat-chip" style="border-color: var(--accent); color: var(--accent-light);"><span class="chip-dot" style="background: var(--accent);"></span> VS Code + Copilot</div>
                 <div class="compat-chip"><span class="chip-dot"></span> Claude Desktop</div>
                 <div class="compat-chip"><span class="chip-dot"></span> LangGraph</div>
@@ -1334,10 +1383,13 @@ Sorted:   [5, 11, 19, 25, 52,
         <div class="cta-glow"></div>
         <div class="container" style="position: relative; z-index: 1;">
             <h2 class="reveal">Ready to isolate your agents?</h2>
-            <p class="reveal">One command to install. One config to connect.</p>
+            <p class="reveal">Download BunkerDesktop or <code style="color: var(--cyan);">pip install bunkervm</code></p>
             <div class="hero-buttons reveal">
-                <a href="https://github.com/ashishgituser/bunkervm" class="btn btn-glow" target="_blank">
-                    Get Started on GitHub &#8599;
+                <a href="https://github.com/ashishgituser/bunkervm/releases" class="btn btn-glow" target="_blank">
+                    &#11015; Download BunkerDesktop
+                </a>
+                <a href="https://github.com/ashishgituser/bunkervm" class="btn btn-ghost" target="_blank">
+                    View on GitHub &#8599;
                 </a>
             </div>
         </div>
