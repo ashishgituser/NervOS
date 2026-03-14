@@ -5,7 +5,7 @@ name: Build & Release BunkerVM
 #   2. Windows installer (BunkerDesktop.exe)          — for desktop users
 #   3. PyPI package
 #
-# Trigger: push a tag like v0.8.1
+# Trigger: push a tag like v0.8.2
 
 on:
   push:
@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g. v0.8.1)'
+        description: 'Release version (e.g. v0.8.2)'
         required: true
 
 permissions:
@@ -167,41 +167,48 @@ jobs:
           $size = [math]::Round($installer.Length / 1MB, 2)
           Write-Host "Installer built: $($installer.Name) ($size MB)"
 
-      # ── Code Signing (enable when you have a certificate) ──
-      # Uncomment ONE of the following signing methods:
+      # ── Code Signing ──
+      # Signs both BunkerDesktop.exe and the installer to prevent SmartScreen blocking.
+      # Uses SSL.com eSigner — cloud-based, no hardware token needed.
       #
-      # Option A: Azure Trusted Signing ($10/mo, immediate SmartScreen trust)
-      #   Requires secrets: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET,
-      #                     TRUSTED_SIGNING_ACCOUNT, TRUSTED_SIGNING_PROFILE
+      # Setup (one-time, ~10 min):
+      #   1. Buy OV Code Signing cert at https://ssl.com (~$75/yr)
+      #      - Or apply for free OSS cert at https://signpath.io/open-source
+      #   2. Enable eSigner for the cert in your SSL.com dashboard
+      #   3. Add these GitHub repo secrets (Settings → Secrets → Actions):
+      #      - ES_USERNAME     (SSL.com account email)
+      #      - ES_PASSWORD     (SSL.com account password)
+      #      - ES_CREDENTIAL_ID (from eSigner dashboard)
+      #      - ES_TOTP_SECRET  (eSigner TOTP secret for automated signing)
       #
-      # - name: Sign with Azure Trusted Signing
-      #   uses: azure/trusted-signing-action@v0.5.0
-      #   with:
-      #     azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-      #     azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-      #     azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-      #     endpoint: https://eus.codesigning.azure.net/
-      #     trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT }}
-      #     certificate-profile-name: ${{ secrets.TRUSTED_SIGNING_PROFILE }}
-      #     files-folder: installer\windows\Output
-      #     files-folder-filter: exe
-      #     file-digest: SHA256
-      #     timestamp-rfc3161: http://timestamp.acs.microsoft.com
-      #     timestamp-digest: SHA256
-      #
-      # Option B: SignPath.io (free for open source)
-      #   Apply at https://signpath.io/open-source
-      #   Requires: SIGNPATH_API_TOKEN secret, organization/project setup
-      #
-      # - name: Sign with SignPath
-      #   uses: signpath/github-action-submit-signing-request@v1
-      #   with:
-      #     api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-      #     organization-id: <your-org-id>
-      #     project-slug: bunkervm
-      #     signing-policy-slug: release-signing
-      #     artifact-configuration-slug: windows-installer
-      #     github-artifact-id: windows-installer
+      # This step is skipped gracefully if secrets are not configured.
+      - name: Sign executables (SSL.com eSigner)
+        if: env.ES_USERNAME != ''
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: installer/windows/Output/BunkerDesktopSetup-${{ env.VERSION }}.exe
+          malware_block: false
+        env:
+          ES_USERNAME: ${{ secrets.ES_USERNAME }}
+
+      - name: Sign BunkerDesktop.exe
+        if: env.ES_USERNAME != ''
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: desktop/dist/BunkerDesktop.exe
+          malware_block: false
+        env:
+          ES_USERNAME: ${{ secrets.ES_USERNAME }}
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
