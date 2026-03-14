@@ -28,11 +28,7 @@
 
 3 AI agents, 3 isolated Firecracker VMs, running in parallel. Build, test, and security-scan — then nuke one VM and watch the others survive.
 
-<p align="center">
-  <video src="https://github.com/ashishgituser/bunkervm/raw/main/docs/LangGraphMultiAgentTest.mp4" controls width="800">
-    Your browser does not support the video tag.
-  </video>
-</p>
+https://github.com/ashishgituser/bunkervm/raw/main/docs/LangGraphMultiAgentTest.mp4
 
 ---
 
