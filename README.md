@@ -46,6 +46,19 @@
 
 That's it. No `pip install`, no WSL commands, no config files.
 
+> **Windows SmartScreen warning:** Windows may block the installer because it's not yet code-signed. To unblock:
+>
+> **Option A (easiest):** When you see "Windows protected your PC", click **"More info"** → **"Run anyway"**.
+>
+> **Option B (right-click):** Right-click the downloaded `.exe` → **Properties** → check **"Unblock"** at the bottom → **OK** → then run it.
+>
+> **Option C (PowerShell):**
+> ```powershell
+> Unblock-File -Path "$HOME\Downloads\BunkerDesktopSetup-*.exe"
+> ```
+>
+> This is standard for open-source desktop apps. Code signing is coming soon.
+
 > **VS Code + Copilot users:** BunkerDesktop runs the engine in the background. Once it's running, Copilot Chat automatically connects to it — every tool call runs in a hardware-isolated VM.
 
 ---

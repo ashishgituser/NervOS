@@ -1,6 +1,6 @@
 {
   "name": "bunkerdesktop",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "private": true,
   "scripts": {
     "dev": "echo 'Open desktop/src/index.html in a browser or run: tauri dev'",
